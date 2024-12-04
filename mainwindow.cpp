@@ -9,6 +9,8 @@
 #include <QJsonParseError>
 #include <QScreen>
 #include <QGuiApplication>
+#include <QDateTime>
+#include <QTimer>  // Thêm thư viện QTimer
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), tcpSocket(new QTcpSocket(this))
@@ -19,6 +21,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->setStyleSheet("QWidget { background-color: white; color: black; }");
 
     connect(ui->sendButton, &QPushButton::clicked, this, &MainWindow::on_sendButton_clicked);
+
     connect(tcpSocket, &QTcpSocket::readyRead, this, &MainWindow::onReadyRead);
 
     // Connect signals to adjust size of text edits
@@ -33,7 +36,19 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_sendButton_clicked()
 {
+    if (!ui->sendButton->isEnabled())
+        return;
+    ui->sendButton->setEnabled(false); // Vô hiệu hóa nút
+
+    // Lấy thời gian hiện tại
+    QDateTime currentTime = QDateTime::currentDateTime();
+    QString formattedTime = currentTime.toString("yyyy-MM-dd HH:mm:ss.zzz"); // Định dạng thời gian với milliseconds
+
+    // Log thời gian
+    qDebug() << "Button clicked at:" << formattedTime;
+
     QString message = ui->inputTextEdit->toPlainText();
+    qDebug() << "Message sent to server:" << message.toUtf8();
 
     tcpSocket->connectToHost(QHostAddress::LocalHost, 8080);
     if (tcpSocket->waitForConnected())
@@ -44,6 +59,9 @@ void MainWindow::on_sendButton_clicked()
     {
         ui->responseTextEdit->setText("Failed to connect to server");
     }
+    QTimer::singleShot(1000, this, [this]() {
+        ui->sendButton->setEnabled(true); // Kích hoạt lại nút sau 1 giây
+    });
 }
 
 void MainWindow::onReadyRead()
