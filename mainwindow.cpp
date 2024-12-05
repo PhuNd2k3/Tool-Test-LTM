@@ -10,7 +10,7 @@
 #include <QScreen>
 #include <QGuiApplication>
 #include <QDateTime>
-#include <QTimer>  // Thêm thư viện QTimer
+#include <QTimer> // Thêm thư viện QTimer
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow), tcpSocket(new QTcpSocket(this))
@@ -59,24 +59,34 @@ void MainWindow::on_sendButton_clicked()
     {
         ui->responseTextEdit->setText("Failed to connect to server");
     }
-    QTimer::singleShot(1000, this, [this]() {
-        ui->sendButton->setEnabled(true); // Kích hoạt lại nút sau 1 giây
-    });
+    QTimer::singleShot(1000, this, [this]()
+                       {
+                           ui->sendButton->setEnabled(true); // Kích hoạt lại nút sau 1 giây
+                       });
 }
 
 void MainWindow::onReadyRead()
 {
     QByteArray response = tcpSocket->readAll();
-    QJsonParseError parseError;
-    QJsonDocument jsonResponse = QJsonDocument::fromJson(response, &parseError);
+    QString responseString(response);
+    QStringList responseParts = responseString.split("\n");
 
-    if (parseError.error != QJsonParseError::NoError)
+    QString formattedResponse;
+    for (const QString &part : responseParts)
     {
-        ui->responseTextEdit->setText("Invalid JSON response: " + parseError.errorString());
-        return;
+        QJsonParseError parseError;
+        QJsonDocument jsonResponse = QJsonDocument::fromJson(part.toUtf8(), &parseError);
+
+        if (parseError.error == QJsonParseError::NoError)
+        {
+            formattedResponse += formatJsonValue(jsonResponse.isObject() ? QJsonValue(jsonResponse.object()) : QJsonValue(jsonResponse.array())) + "\n";
+        }
+        else
+        {
+            formattedResponse += part + "\n";
+        }
     }
 
-    QString formattedResponse = formatJsonValue(jsonResponse.isObject() ? QJsonValue(jsonResponse.object()) : QJsonValue(jsonResponse.array()));
     ui->responseTextEdit->setText(formattedResponse);
 }
 
@@ -144,11 +154,11 @@ void MainWindow::adjustTextEditSize(QTextEdit *textEdit)
     if (contentHeight > maxHeight)
     {
         textEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded); // Bật thanh cuộn khi cần
-        textEdit->setFixedHeight(maxHeight); // Cố định chiều cao tối đa
+        textEdit->setFixedHeight(maxHeight);                         // Cố định chiều cao tối đa
     }
     else
     {
         textEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff); // Tắt thanh cuộn nếu không cần
-        textEdit->setFixedHeight(contentHeight); // Đặt chiều cao dựa trên nội dung
+        textEdit->setFixedHeight(contentHeight);                      // Đặt chiều cao dựa trên nội dung
     }
 }
